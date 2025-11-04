@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -35,7 +34,6 @@ export const TodoItem: React.FC<TodoItemProps> = ({
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
     });
   };
 
@@ -50,8 +48,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
         styles.container,
         {
           backgroundColor: theme.colors.card,
-          borderColor: theme.colors.border,
-          ...theme.shadows.sm,
+          borderBottomColor: theme.colors.border,
         },
         isActive && { opacity: 0.5 },
       ]}
@@ -74,89 +71,65 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           ]}
         >
           {todo.isCompleted && (
-            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
           )}
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.content}
-        onPress={() => onEdit(todo)}
-      >
-        <Text
-          style={[
-            styles.title,
-            {
-              color: theme.colors.text,
-              textDecorationLine: todo.isCompleted ? 'line-through' : 'none',
-              opacity: todo.isCompleted ? 0.6 : 1,
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {todo.title}
-        </Text>
-
-        {todo.description && (
+      <TouchableOpacity style={styles.content} onPress={() => onEdit(todo)}>
+        <View style={styles.textContainer}>
           <Text
             style={[
-              styles.description,
+              styles.title,
               {
-                color: theme.colors.textSecondary,
+                color: theme.colors.text,
                 textDecorationLine: todo.isCompleted ? 'line-through' : 'none',
+                opacity: todo.isCompleted ? 0.5 : 1,
               },
             ]}
             numberOfLines={2}
           >
-            {todo.description}
+            {todo.title}
           </Text>
-        )}
 
-        {todo.dueDate && (
-          <View style={styles.dateContainer}>
-            <Ionicons
-              name="calendar-outline"
-              size={14}
-              color={
-                isOverdue(todo.dueDate)
-                  ? theme.colors.error
-                  : theme.colors.textSecondary
-              }
-            />
-            <Text
-              style={[
-                styles.date,
-                {
-                  color: isOverdue(todo.dueDate)
+          {todo.dueDate && (
+            <View style={styles.dueDateContainer}>
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color={
+                  isOverdue(todo.dueDate)
                     ? theme.colors.error
-                    : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              {formatDate(todo.dueDate)}
-            </Text>
-          </View>
-        )}
+                    : theme.colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.dueDate,
+                  {
+                    color: isOverdue(todo.dueDate)
+                      ? theme.colors.error
+                      : theme.colors.textSecondary,
+                  },
+                ]}
+              >
+                {formatDate(todo.dueDate)}
+              </Text>
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
 
-      <View style={styles.actions}>
-        {drag && (
-          <TouchableOpacity onLongPress={drag} style={styles.dragButton}>
-            <Ionicons
-              name="reorder-two"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
-          </TouchableOpacity>
-        )}
+      <TouchableOpacity onLongPress={drag} style={styles.dragHandle}>
+        <Ionicons name="menu" size={24} color={theme.colors.textSecondary} />
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => onDelete(todo._id)}
-          style={styles.deleteButton}
-        >
-          <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        onPress={() => onDelete(todo._id)}
+        style={styles.deleteButton}
+      >
+        <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -164,21 +137,18 @@ export const TodoItem: React.FC<TodoItemProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 16,
-    marginVertical: 4,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'flex-start',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderBottomWidth: 1,
   },
   checkbox: {
-    marginRight: 12,
-    paddingTop: 2,
+    marginRight: 16,
   },
   checkboxInner: {
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -186,34 +156,28 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  textContainer: {
+    flexDirection: 'column',
+  },
   title: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '400',
   },
-  description: {
-    fontSize: 14,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  dateContainer: {
+  dueDateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 6,
+    gap: 4,
   },
-  date: {
-    fontSize: 12,
-    marginLeft: 4,
+  dueDate: {
+    fontSize: 13,
   },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  dragButton: {
+  dragHandle: {
     padding: 4,
-    marginRight: 8,
+    marginLeft: 8,
   },
   deleteButton: {
     padding: 4,
+    marginLeft: 8,
   },
 });

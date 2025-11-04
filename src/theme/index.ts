@@ -15,6 +15,8 @@ export interface Theme {
     completed: string;
     active: string;
     inactive: string;
+    gradient: [string, string, ...string[]];
+    cardGradient?: [string, string, ...string[]];
   };
   spacing: {
     xs: number;
@@ -99,6 +101,7 @@ export const lightTheme: Theme = {
     completed: '#10B981',
     active: '#6366F1',
     inactive: '#CBD5E1',
+    gradient: ['#9333EA', '#3B82F6'],
   },
   spacing: {
     xs: 4,
@@ -183,6 +186,7 @@ export const darkTheme: Theme = {
     completed: '#34D399',
     active: '#818CF8',
     inactive: '#475569',
+    gradient: ['#161B45', '#5B21B6'],
   },
   spacing: {
     xs: 4,

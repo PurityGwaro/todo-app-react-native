@@ -3,14 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
   StatusBar,
+  TextInput,
+  Keyboard,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
@@ -18,8 +21,6 @@ import DraggableFlatList, {
 import { useTheme } from '../contexts/ThemeContext';
 import { TodoItem } from '../components/TodoItem';
 import { ThemeSwitcher } from '../components/ThemeSwitcher';
-import { Input } from '../components/Input';
-import { Button } from '../components/Button';
 import { AddTodoModal } from '../components/AddTodoModal';
 import { Todo } from '../types';
 import { useMutation, useQuery } from 'convex/react';
@@ -32,7 +33,12 @@ export const HomeScreen: React.FC = () => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
-  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [newTodoText, setNewTodoText] = useState('');
+  const [newTodoDueDate, setNewTodoDueDate] = useState<Date | undefined>(undefined);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   const todos = useQuery(api.todos.getTodos) || [];
@@ -72,11 +78,6 @@ export const HomeScreen: React.FC = () => {
     [deleteTodo]
   );
 
-  const handleEditTodo = useCallback((todo: Todo) => {
-    setEditingTodo(todo);
-    setIsAddModalVisible(true);
-  }, []);
-
   const handleReorder = useCallback(
     (data: Todo[]) => {
       const updates = data.map((item, index) => ({
@@ -87,6 +88,31 @@ export const HomeScreen: React.FC = () => {
     },
     [reorderTodos]
   );
+
+  const handleAddTodo = useCallback(() => {
+    if (newTodoText.trim()) {
+      createTodo({
+        title: newTodoText.trim(),
+        dueDate: newTodoDueDate?.getTime()
+      });
+      setNewTodoText('');
+      setNewTodoDueDate(undefined);
+      setIsTyping(false);
+      Keyboard.dismiss();
+    }
+  }, [newTodoText, newTodoDueDate, createTodo]);
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setNewTodoDueDate(selectedDate);
+    }
+  };
+
+  const handleEditTodo = useCallback((todo: Todo) => {
+    setEditingTodo(todo);
+    setIsModalVisible(true);
+  }, []);
 
   const handleSaveTodo = useCallback(
     (title: string, description?: string, dueDate?: number) => {
@@ -100,9 +126,15 @@ export const HomeScreen: React.FC = () => {
       } else {
         createTodo({ title, description, dueDate });
       }
+      setEditingTodo(null);
     },
     [editingTodo, createTodo, updateTodo]
   );
+
+  const handleCloseSearch = useCallback(() => {
+    setIsSearchVisible(false);
+    setSearchQuery('');
+  }, []);
 
   const renderTodoItem = ({ item, drag, isActive }: RenderItemParams<Todo>) => (
     <ScaleDecorator>
@@ -117,15 +149,18 @@ export const HomeScreen: React.FC = () => {
     </ScaleDecorator>
   );
 
-  const EmptyState = () => (
-    <View style={styles.emptyState}>
-      <Ionicons name="checkmark-done-outline" size={80} color={theme.colors.inactive} />
-      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-        No todos yet
+  const ListFooter = () => (
+    <View style={[styles.statsRow, { borderTopColor: theme.colors.border }]}>
+      <Text style={[styles.statsText, { color: theme.colors.textSecondary }]}>
+        {stats.active} items left
       </Text>
-      <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-        Add a new todo to get started
-      </Text>
+      {stats.completed > 0 && (
+        <TouchableOpacity onPress={() => clearCompleted()}>
+          <Text style={[styles.clearText, { color: theme.colors.textSecondary }]}>
+            Clear Completed
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -135,160 +170,322 @@ export const HomeScreen: React.FC = () => {
     completed: todos.filter((t) => t.isCompleted).length,
   };
 
+  const EmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="checkmark-done-outline" size={80} color={theme.colors.inactive} />
+      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+        No todos yet
+      </Text>
+    </View>
+  );
+
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+    <View style={styles.container}>
       <StatusBar
         barStyle={theme.colors.text === '#F1F5F9' ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.colors.background}
+        backgroundColor="transparent"
+        translucent
       />
 
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: theme.colors.text }]}>My Todos</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {stats.active} active, {stats.completed} completed
-          </Text>
-        </View>
-        <ThemeSwitcher />
-      </View>
-
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Search todos..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          icon={<Ionicons name="search" size={20} color={theme.colors.textSecondary} />}
-        />
-      </View>
-
-      <View style={styles.filterContainer}>
-        {(['all', 'active', 'completed'] as FilterType[]).map((filterType) => (
-          <TouchableOpacity
-            key={filterType}
-            style={[
-              styles.filterTab,
-              {
-                backgroundColor:
-                  filter === filterType ? theme.colors.primary : theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            onPress={() => setFilter(filterType)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                {
-                  color:
-                    filter === filterType ? '#FFFFFF' : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {todos === undefined ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
-      ) : filteredTodos.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <DraggableFlatList
-          data={filteredTodos}
-          renderItem={renderTodoItem}
-          keyExtractor={(item) => item._id}
-          onDragEnd={({ data }) => handleReorder(data)}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-
-      <TouchableOpacity
-        style={[
-          styles.fab,
-          {
-            backgroundColor: theme.colors.primary,
-            ...theme.shadows.lg,
-          },
-        ]}
-        onPress={() => {
-          setEditingTodo(null);
-          setIsAddModalVisible(true);
-        }}
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={theme.colors.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientHeader}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+        <View style={styles.headerContainer}>
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+              <Text style={styles.title}>T O D O</Text>
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (isSearchVisible) {
+                      handleCloseSearch();
+                    } else {
+                      setIsSearchVisible(true);
+                    }
+                  }}
+                  style={styles.searchIcon}
+                >
+                  <Ionicons
+                    name={isSearchVisible ? "close" : "search"}
+                    size={28}
+                    color="#FFFFFF"
+                  />
+                </TouchableOpacity>
+                <ThemeSwitcher />
+              </View>
+            </View>
 
-      {stats.completed > 0 && (
-        <View style={styles.clearButtonContainer}>
-          <Button
-            title={`Clear ${stats.completed} Completed`}
-            variant="outline"
-            size="small"
-            onPress={() => clearCompleted()}
-          />
+            {/* Search Input (Collapsible) */}
+            {isSearchVisible && (
+              <View style={[styles.searchContainer, { backgroundColor: theme.colors.card }]}>
+                <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
+                <TextInput
+                  style={[styles.searchInput, { color: theme.colors.text }]}
+                  placeholder="Search todos..."
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Add Todo Input - Only show when search is not visible */}
+            {!isSearchVisible && (
+              <View style={[styles.addTodoContainer, { backgroundColor: theme.colors.card }]}>
+                <TextInput
+                  style={[styles.addTodoInput, { color: theme.colors.text }]}
+                  placeholder="Create a new todo..."
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={newTodoText}
+                  onChangeText={setNewTodoText}
+                  onSubmitEditing={handleAddTodo}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color={newTodoDueDate ? theme.colors.primary : theme.colors.textSecondary}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.addButton,
+                    { backgroundColor: theme.colors.primary }
+                  ]}
+                  onPress={handleAddTodo}
+                  disabled={!newTodoText.trim()}
+                >
+                  <Ionicons name="add" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={newTodoDueDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    minimumDate={new Date()}
+                  />
+                )}
+              </View>
+            )}
+          </SafeAreaView>
         </View>
-      )}
+      </LinearGradient>
 
+      {/* Todo List - Card Background */}
+      <View style={[styles.listContainer, { backgroundColor: theme.colors.background }]}>
+        {todos === undefined ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : filteredTodos.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <View style={styles.desktopContainer}>
+            <View style={[styles.todoCard, { backgroundColor: theme.colors.card }]}>
+              <DraggableFlatList
+                data={filteredTodos}
+                renderItem={renderTodoItem}
+                keyExtractor={(item) => item._id}
+                onDragEnd={({ data }) => handleReorder(data)}
+                ListFooterComponent={ListFooter}
+                contentContainerStyle={styles.listContent}
+              />
+            </View>
+
+            {/* Bottom Section - Sticky - Only show when there are todos */}
+            {todos.length > 0 && (
+              <View style={[styles.bottomSection, { backgroundColor: theme.colors.card }]}>
+                {/* Filter Tabs */}
+                <View style={styles.filterContainer}>
+                  {(['all', 'active', 'completed'] as FilterType[]).map((filterType) => (
+                    <TouchableOpacity
+                      key={filterType}
+                      style={[
+                        styles.filterTab,
+                        filter === filterType && {
+                          borderBottomWidth: 2,
+                          borderBottomColor: theme.colors.primary,
+                        },
+                      ]}
+                      onPress={() => setFilter(filterType)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterText,
+                          {
+                            color:
+                              filter === filterType ? theme.colors.primary : theme.colors.textSecondary,
+                            fontWeight: filter === filterType ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={[styles.dragText, { color: theme.colors.textSecondary }]}>
+                  Drag and drop to reorder list
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Add/Edit Todo Modal */}
       <AddTodoModal
-        visible={isAddModalVisible}
-        onClose={() => setIsAddModalVisible(false)}
+        visible={isModalVisible}
+        onClose={() => {
+          setIsModalVisible(false);
+          setEditingTodo(null);
+        }}
         onSave={handleSaveTodo}
         editingTodo={editingTodo}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  desktopContainer: {
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  headerContainer: {
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  gradientHeader: {
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingBottom: 60
+  },
+  safeArea: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 8,
   },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 4,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchIcon: {
+    padding: 4,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    gap: 8,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '600',
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
+  },
+  addTodoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    gap: 12,
+  },
+  addTodoInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listContainer: {
+    flex: 1,
+    marginTop: 0,
+    paddingTop: 20,
+  },
+  todoCard: {
+    marginHorizontal: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 16,
+    marginTop: -40
   },
   listContent: {
-    paddingBottom: 100,
+    paddingBottom: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+  },
+  statsText: {
+    fontSize: 14,
+  },
+  clearText: {
+    fontSize: 14,
   },
   emptyState: {
     flex: 1,
@@ -311,19 +508,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+  bottomSection: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  clearButtonContainer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 24,
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 16,
+  },
+  filterTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  filterText: {
+    fontSize: 14,
+  },
+  dragText: {
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
