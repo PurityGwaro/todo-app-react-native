@@ -288,14 +288,14 @@ export const HomeScreen: React.FC = () => {
 
       {/* Todo List - Card Background */}
       <View style={[styles.listContainer, { backgroundColor: theme.colors.background }]}>
-        {todos === undefined ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        ) : filteredTodos.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <View style={styles.desktopContainer}>
+        <View style={styles.desktopContainer}>
+          {todos === undefined ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : filteredTodos.length === 0 ? (
+            <EmptyState />
+          ) : (
             <View style={[styles.todoCard, { backgroundColor: theme.colors.card }]}>
               <DraggableFlatList
                 data={filteredTodos}
@@ -306,47 +306,43 @@ export const HomeScreen: React.FC = () => {
                 contentContainerStyle={styles.listContent}
               />
             </View>
+          )}
 
-            {/* Bottom Section - Sticky - Only show when there are todos */}
-            {todos.length > 0 && (
-              <View style={[styles.bottomSection, { backgroundColor: theme.colors.card }]}>
-                {/* Filter Tabs */}
-                <View style={styles.filterContainer}>
-                  {(['all', 'active', 'completed'] as FilterType[]).map((filterType) => (
-                    <TouchableOpacity
-                      key={filterType}
-                      style={[
-                        styles.filterTab,
-                        filter === filterType && {
-                          borderBottomWidth: 2,
-                          borderBottomColor: theme.colors.primary,
-                        },
-                      ]}
-                      onPress={() => setFilter(filterType)}
-                    >
-                      <Text
-                        style={[
-                          styles.filterText,
-                          {
-                            color:
-                              filter === filterType ? theme.colors.primary : theme.colors.textSecondary,
-                            fontWeight: filter === filterType ? '600' : '400',
-                          },
-                        ]}
-                      >
-                        {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+          <View style={[styles.bottomSection, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.filterContainer}>
+              {(['all', 'active', 'completed'] as FilterType[]).map((filterType) => (
+                <TouchableOpacity
+                  key={filterType}
+                  style={[
+                    styles.filterTab,
+                    filter === filterType && {
+                      borderBottomWidth: 2,
+                      borderBottomColor: theme.colors.primary,
+                    },
+                  ]}
+                  onPress={() => setFilter(filterType)}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      {
+                        color:
+                          filter === filterType ? theme.colors.primary : theme.colors.textSecondary,
+                        fontWeight: filter === filterType ? '600' : '400',
+                      },
+                    ]}
+                  >
+                    {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-                <Text style={[styles.dragText, { color: theme.colors.textSecondary }]}>
-                  Drag and drop to reorder list
-                </Text>
-              </View>
-            )}
+            <Text style={[styles.dragText, { color: theme.colors.textSecondary }]}>
+              Drag and drop to reorder list
+            </Text>
           </View>
-        )}
+        </View>
       </View>
 
       {/* Add/Edit Todo Modal */}
@@ -371,6 +367,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 600,
     alignSelf: 'center',
+    flex: 1,
+    paddingBottom: 10
   },
   headerContainer: {
     width: '100%',
