@@ -32,6 +32,12 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Convex
+convex/_generated/
+convex/**/*.js
+convex/**/*.js.map
 
 # typescript
 *.tsbuildinfo

@@ -1,20 +1,21 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import { ThemeProvider } from './src/contexts/ThemeContext';
+import { HomeScreen } from './src/screens/HomeScreen';
+
+// Initialize Convex client
+// You'll need to replace this with your actual Convex deployment URL
+const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL || '');
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ConvexProvider client={convex}>
+        <ThemeProvider>
+          <HomeScreen />
+        </ThemeProvider>
+      </ConvexProvider>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
