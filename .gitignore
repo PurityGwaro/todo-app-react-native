@@ -34,10 +34,6 @@ yarn-error.*
 .env*.local
 .env
 
-# Convex
-convex/**/*.js
-convex/**/*.js.map
-
 # typescript
 *.tsbuildinfo
 
