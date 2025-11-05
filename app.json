@@ -29,7 +29,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "93cbb2ad-1a55-4c2d-a3c2-3a12d284f71d"
+        "projectId": "93cbb2ad-1a55-4c2d-a3c2-3a12d284f71d",
+        "plugins": [
+          "@react-native-async-storage/async-storage"
+        ]
       }
     }
   }

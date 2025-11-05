@@ -6,7 +6,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 
 // Initialize Convex client
 // You'll need to replace this with your actual Convex deployment URL
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL || '');
+const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL || 'https://befitting-spaniel-531.convex.cloud');
 
 export default function App() {
   return (
